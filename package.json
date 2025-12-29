@@ -6,7 +6,10 @@
     "dev": "vite build --watch --mode development",
     "build": "vite build",
     "dev:watch": "node scripts/watch-manifest.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -18,9 +21,11 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^4.0.16",
+    "jsdom": "^27.4.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
-    "vite-plugin-web-extension": "^4.1.1"
+    "vite-plugin-web-extension": "^4.1.1",
+    "vitest": "^4.0.16"
   }
 }
-

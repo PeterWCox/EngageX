@@ -4,17 +4,12 @@
   "version": "1.0.0",
   "description": "Display follower counts next to usernames on Twitter",
   "permissions": [
-    "storage",
-    "webRequest"
+    "storage"
   ],
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*"
   ],
-  "background": {
-    "service_worker": "background/background.js",
-    "type": "module"
-  },
   "content_scripts": [
     {
       "matches": [

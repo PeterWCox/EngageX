@@ -11,6 +11,9 @@ import { getCardStack } from './get-card-stack';
 import { injectFollowerCountToCard, FriendlyPost, FollowerData } from './inject-card-elements';
 import { mapTimelineData } from './map-timeline-data';
 
+// Distinct startup log to verify fresh build
+console.log('%c🚀 TWITTER EXTENSION LOADED 🚀', 'font-size: 20px; font-weight: bold; color: #1DA1F2; background: #000; padding: 10px; border-radius: 5px;');
+console.log('%cBuild timestamp: ' + new Date().toISOString(), 'font-size: 12px; color: #666;');
 console.log('🔧 [Twitter Extension] Setting up interceptors in MAIN world...');
 
 // Store follower data by username (screen_name)
