@@ -19,11 +19,15 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
+        background: resolve(__dirname, 'src/background/index.ts'),
         content: resolve(__dirname, 'src/content/index.ts'),
         popup: resolve(__dirname, 'src/popup.html'),
       },
       output: {
         entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'background') {
+            return 'background/[name].js';
+          }
           if (chunkInfo.name === 'content') {
             return 'content/[name].js';
           }

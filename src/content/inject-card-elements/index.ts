@@ -239,11 +239,15 @@ function injectJsonPopoutButton(card: Element, friendlyPost: FriendlyPost, usern
  * @param card - The tweet card element to inject into
  * @param followerDataMap - Map of username to follower data
  * @param friendlyPostMap - Map of username to friendly post data
+ * @param newUsernames - Set of usernames that are new (not from cache)
+ * @param detectedUsernames - Set of usernames that have been detected/shown
  */
 export function injectFollowerCountToCard(
   card: Element,
   followerDataMap: Map<string, FollowerData>,
-  friendlyPostMap: Map<string, FriendlyPost>
+  friendlyPostMap: Map<string, FriendlyPost>,
+  newUsernames?: Set<string>,
+  detectedUsernames?: Set<string>
 ): void {
   // Don't skip if already processed - we want to update with new data
   // But check if badge already exists to avoid duplicates
@@ -288,14 +292,30 @@ export function injectFollowerCountToCard(
     const followerData = followerDataMap.get(username);
     
     if (followerData) {
+      // Determine if this is new data that hasn't been detected yet
+      const isNew = newUsernames?.has(username) ?? false;
+      const isDetected = detectedUsernames?.has(username) ?? false;
+      const isNewAndUndetected = isNew && !isDetected;
+      
+      // Mark as detected after showing
+      if (detectedUsernames) {
+        detectedUsernames.add(username);
+      }
+      
       // Create chip-like badge element
       const badge = document.createElement('span');
       badge.className = 'twitter-extension-follower-badge';
       badge.textContent = `${formatFollowerCount(followerData.followersCount)} followers`;
+      
+      // Green for new undetected data, red for cached/existing data
+      const backgroundColor = isNewAndUndetected 
+        ? 'rgb(34, 197, 94)' // Green
+        : 'rgb(185, 28, 28)'; // Red
+      
       badge.style.cssText = `
         display: inline-flex;
         align-items: center;
-        background-color: rgb(185, 28, 28);
+        background-color: ${backgroundColor};
         color: rgb(255, 255, 255);
         font-size: 13px;
         font-weight: 500;

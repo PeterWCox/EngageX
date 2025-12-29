@@ -22,8 +22,67 @@ const followerDataMap = new Map<string, FollowerData>();
 // Store friendly post data by username
 const friendlyPostMap = new Map<string, FriendlyPost>();
 
+// Track which usernames have been detected/shown on the page
+const detectedUsernames = new Set<string>();
+
+// Track which usernames are new (not from cache)
+const newUsernames = new Set<string>();
+
 // Track total posts processed across all requests
 let totalPostsProcessed = 0;
+
+// Load follower data from Chrome storage via background worker
+async function loadFollowerDataFromStorage() {
+  try {
+    // Use message passing since we're in MAIN world and can't access chrome.storage directly
+    const response = await new Promise<{ data: FollowerData[] }>((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { type: 'GET_FOLLOWER_DATA' },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(response);
+          }
+        }
+      );
+    });
+    
+    if (response.data && Array.isArray(response.data)) {
+      response.data.forEach((item: FollowerData) => {
+        followerDataMap.set(item.screenName, item);
+      });
+      console.log(`📦 [Twitter Extension] Loaded ${response.data.length} follower records from storage`);
+    }
+  } catch (error) {
+    console.error('❌ [Twitter Extension] Error loading follower data from storage:', error);
+  }
+}
+
+// Save follower data to Chrome storage via background worker
+async function saveFollowerDataToStorage(newData: FollowerData[]) {
+  try {
+    // Use message passing since we're in MAIN world and can't access chrome.storage directly
+    const response = await new Promise<{ success: boolean }>((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { type: 'SAVE_FOLLOWER_DATA', newData },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(response);
+          }
+        }
+      );
+    });
+    
+    if (response.success) {
+      console.log(`💾 [Twitter Extension] Saved ${newData.length} new follower records to storage`);
+    }
+  } catch (error) {
+    console.error('❌ [Twitter Extension] Error saving follower data to storage:', error);
+  }
+}
 
 
 /**
@@ -34,7 +93,7 @@ function processAllCards() {
   const cards = getCardsBySelector();
   
   cards.forEach((card) => {
-    injectFollowerCountToCard(card, followerDataMap, friendlyPostMap);
+    injectFollowerCountToCard(card, followerDataMap, friendlyPostMap, newUsernames, detectedUsernames);
   });
 }
 
@@ -47,9 +106,19 @@ function extractAndLogPostData(data: any) {
     // Map the timeline data using the mapper
     const mappedData = mapTimelineData(data);
     
+    // Track new follower data to save to storage
+    const newFollowerData: FollowerData[] = [];
+    
     // Merge the mapped data into our existing maps
     mappedData.followerData.forEach((value, key) => {
+      const wasInCache = followerDataMap.has(key);
       followerDataMap.set(key, value);
+      
+      // If it wasn't in cache, mark as new and add to save list
+      if (!wasInCache) {
+        newUsernames.add(key);
+        newFollowerData.push(value);
+      }
     });
     
     mappedData.friendlyPosts.forEach((value, key) => {
@@ -61,6 +130,11 @@ function extractAndLogPostData(data: any) {
         console.log(`📝 Post ${totalPostsProcessed} (@${key}):`, value);
       }
     });
+    
+    // Save new follower data to storage
+    if (newFollowerData.length > 0) {
+      saveFollowerDataToStorage(newFollowerData);
+    }
     
     if (mappedData.newPostsCount > 0) {
       console.log(`✅ [Twitter Extension] Added ${mappedData.newPostsCount} new posts (Total: ${totalPostsProcessed})`);
@@ -186,14 +260,19 @@ function setupTimelineObserver() {
   }
 }
 
-// Start observing when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupTimelineObserver);
-} else {
-  setupTimelineObserver();
-}
-
-// Also set up observer after a delay in case timeline loads later
-setTimeout(setupTimelineObserver, 2000);
+// Initialize: Load data from storage, then set up observers
+(async () => {
+  await loadFollowerDataFromStorage();
+  
+  // Start observing when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTimelineObserver);
+  } else {
+    setupTimelineObserver();
+  }
+  
+  // Also set up observer after a delay in case timeline loads later
+  setTimeout(setupTimelineObserver, 2000);
+})();
 
 console.log('✅ [Twitter Extension] Interceptors ready - watching for HomeLatestTimeline requests');
