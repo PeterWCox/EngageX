@@ -20,6 +20,14 @@
         "https://x.com/*",
         "https://twitter.com/*"
       ],
+      "js": ["content/storage-bridge.js", "content/content.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
       "js": ["content/content.js"],
       "run_at": "document_start",
       "world": "MAIN"

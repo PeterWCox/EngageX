@@ -3,21 +3,28 @@ import type { FollowerData } from '../content/inject-card-elements';
 // Minimal background worker for Chrome storage access
 // Content script runs in MAIN world and can't access chrome.storage directly
 
+console.log('🔧 [Background Worker] Initialized and ready');
+
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log(`📨 [Background] Received message: ${message.type}`);
+  
   if (message.type === 'GET_FOLLOWER_DATA') {
     // Load follower data from storage
     chrome.storage.local.get('followerData').then((result) => {
-      sendResponse({ data: result.followerData || [] });
+      const data = result.followerData || [];
+      console.log(`📊 [Background] Total follower records in storage: ${data.length}`);
+      sendResponse({ data, totalCount: data.length });
     }).catch((error) => {
       console.error('❌ [Background] Error loading follower data:', error);
-      sendResponse({ data: [] });
+      sendResponse({ data: [], totalCount: 0 });
     });
     return true; // Keep channel open for async response
   }
   
   if (message.type === 'SAVE_FOLLOWER_DATA') {
     const { newData } = message;
+    console.log(`💾 [Background] Saving ${Array.isArray(newData) ? newData.length : 0} follower records`);
     if (Array.isArray(newData)) {
       // Load existing data, merge with new, and save
       chrome.storage.local.get('followerData').then((result) => {
@@ -35,14 +42,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         });
         
         // Save back to storage
+        const finalData = Array.from(existingMap.values());
         return chrome.storage.local.set({
-          followerData: Array.from(existingMap.values())
+          followerData: finalData
+        }).then(() => {
+          return finalData.length;
         });
-      }).then(() => {
-        sendResponse({ success: true });
+      }).then((totalCount) => {
+        console.log(`📊 [Background] Total follower records in storage after save: ${totalCount}`);
+        sendResponse({ success: true, totalCount });
       }).catch((error) => {
         console.error('❌ [Background] Error saving follower data:', error);
-        sendResponse({ success: false });
+        sendResponse({ success: false, totalCount: 0 });
       });
     } else {
       sendResponse({ success: false });

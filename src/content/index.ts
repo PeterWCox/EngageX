@@ -31,53 +31,92 @@ const newUsernames = new Set<string>();
 // Track total posts processed across all requests
 let totalPostsProcessed = 0;
 
-// Load follower data from Chrome storage via background worker
+// Load follower data from Chrome storage via storage bridge
 async function loadFollowerDataFromStorage() {
   try {
-    // Use message passing since we're in MAIN world and can't access chrome.storage directly
-    const response = await new Promise<{ data: FollowerData[] }>((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        { type: 'GET_FOLLOWER_DATA' },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
+    const requestId = `load_${Date.now()}_${Math.random()}`;
+    
+    console.log(`📤 [Twitter Extension] Sending GET_FOLLOWER_DATA request: ${requestId}`);
+    
+    // Send message to isolated world storage bridge
+    window.postMessage({
+      type: 'TWITTER_EXT_GET_FOLLOWER_DATA',
+      requestId
+    }, '*');
+    
+    // Wait for response from storage bridge
+    const response = await new Promise<{ data?: FollowerData[]; totalCount?: number; error?: string }>((resolve) => {
+      const handler = (event: MessageEvent) => {
+        if (event.data?.type === 'TWITTER_EXT_RESPONSE' && event.data?.requestId === requestId) {
+          window.removeEventListener('message', handler);
+          resolve(event.data);
         }
-      );
+      };
+      window.addEventListener('message', handler);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        window.removeEventListener('message', handler);
+        resolve({ error: 'Timeout' });
+      }, 5000);
     });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
     
     if (response.data && Array.isArray(response.data)) {
       response.data.forEach((item: FollowerData) => {
         followerDataMap.set(item.screenName, item);
       });
+      const totalCount = response.totalCount ?? response.data.length;
       console.log(`📦 [Twitter Extension] Loaded ${response.data.length} follower records from storage`);
+      console.log(`📊 [Twitter Extension] Total count in local storage: ${totalCount}`);
     }
   } catch (error) {
     console.error('❌ [Twitter Extension] Error loading follower data from storage:', error);
   }
 }
 
-// Save follower data to Chrome storage via background worker
+// Save follower data to Chrome storage via storage bridge
 async function saveFollowerDataToStorage(newData: FollowerData[]) {
   try {
-    // Use message passing since we're in MAIN world and can't access chrome.storage directly
-    const response = await new Promise<{ success: boolean }>((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        { type: 'SAVE_FOLLOWER_DATA', newData },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
+    const requestId = `save_${Date.now()}_${Math.random()}`;
+    
+    console.log(`📤 [Twitter Extension] Sending SAVE_FOLLOWER_DATA request: ${requestId}`, { count: newData.length });
+    
+    // Send message to isolated world storage bridge
+    window.postMessage({
+      type: 'TWITTER_EXT_SAVE_FOLLOWER_DATA',
+      requestId,
+      data: newData
+    }, '*');
+    
+    // Wait for response from storage bridge
+    const response = await new Promise<{ success?: boolean; totalCount?: number; error?: string }>((resolve) => {
+      const handler = (event: MessageEvent) => {
+        if (event.data?.type === 'TWITTER_EXT_RESPONSE' && event.data?.requestId === requestId) {
+          window.removeEventListener('message', handler);
+          resolve(event.data);
         }
-      );
+      };
+      window.addEventListener('message', handler);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        window.removeEventListener('message', handler);
+        resolve({ error: 'Timeout' });
+      }, 5000);
     });
     
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
     if (response.success) {
+      const totalCount = response.totalCount ?? 0;
       console.log(`💾 [Twitter Extension] Saved ${newData.length} new follower records to storage`);
+      console.log(`📊 [Twitter Extension] Total count in local storage: ${totalCount}`);
     }
   } catch (error) {
     console.error('❌ [Twitter Extension] Error saving follower data to storage:', error);
@@ -262,6 +301,9 @@ function setupTimelineObserver() {
 
 // Initialize: Load data from storage, then set up observers
 (async () => {
+  // Small delay to ensure storage bridge is ready
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
   await loadFollowerDataFromStorage();
   
   // Start observing when DOM is ready
