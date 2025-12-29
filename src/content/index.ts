@@ -14,6 +14,9 @@ const followerDataMap = new Map<string, { name: string; screenName: string; foll
 // Store friendly post data by username
 const friendlyPostMap = new Map<string, FriendlyPost>();
 
+// Track total posts processed across all requests
+let totalPostsProcessed = 0;
+
 /**
  * Friendly post object containing only the metadata we need
  */
@@ -50,13 +53,10 @@ function formatFollowerCount(count: number): string {
 /**
  * Inject JSON popout button and modal onto a tweet card
  */
-function injectJsonPopoutButton(card: Element, friendlyPost: FriendlyPost) {
+function injectJsonPopoutButton(card: Element, friendlyPost: FriendlyPost, username: string) {
   // Find the action buttons area (where like, retweet, etc. are)
   const actionButtons = card.querySelector('[role="group"]');
   if (!actionButtons) return;
-  
-  // Check if button already exists
-  if (card.querySelector('.twitter-extension-json-button')) return;
   
   // Create button container
   const buttonContainer = document.createElement('div');
@@ -113,6 +113,7 @@ function injectJsonPopoutButton(card: Element, friendlyPost: FriendlyPost) {
   // Create popout modal
   const popout = document.createElement('div');
   popout.className = 'twitter-extension-json-popout';
+  popout.setAttribute('data-tweet-username', username);
   popout.style.cssText = `
     display: none;
     position: absolute;
@@ -239,21 +240,17 @@ function extractUsernameFromLink(link: HTMLAnchorElement): string | null {
  * Inject follower count badge onto a tweet card
  */
 function injectFollowerCountToCard(card: Element) {
-  // Check if we already processed this card
-  if (card.hasAttribute('data-follower-badge-processed')) {
-    return;
-  }
-  
-  // Mark card as processed
-  card.setAttribute('data-follower-badge-processed', 'true');
+  // Don't skip if already processed - we want to update with new data
+  // But check if badge already exists to avoid duplicates
   
   // Find all User-Name containers in this card
   const userNames = card.querySelectorAll('[data-testid="User-Name"]');
   
   userNames.forEach((userNameContainer) => {
-    // Check if this container already has a badge
-    if (userNameContainer.querySelector('.twitter-extension-follower-badge')) {
-      return;
+    // Remove existing badge if it exists (to update with latest data)
+    const existingBadge = userNameContainer.querySelector('.twitter-extension-follower-badge');
+    if (existingBadge) {
+      existingBadge.remove();
     }
     
     // Find the username link (the one with @username text or href="/username")
@@ -305,10 +302,20 @@ function injectFollowerCountToCard(card: Element) {
       }
     }
     
-    // Add JSON popout button if we have friendly post data
+    // Add/update JSON popout button if we have friendly post data
     const friendlyPost = friendlyPostMap.get(username);
-    if (friendlyPost && !card.querySelector('.twitter-extension-json-button')) {
-      injectJsonPopoutButton(card, friendlyPost);
+    if (friendlyPost) {
+      // Remove existing button if it exists
+      const existingButton = card.querySelector('.twitter-extension-json-button');
+      if (existingButton) {
+        existingButton.closest('.css-175oi2r.r-18u37iz.r-1h0z5md.r-13awgt0')?.remove();
+      }
+      // Remove existing popout if it exists
+      const existingPopout = document.querySelector('.twitter-extension-json-popout[data-tweet-username="' + username + '"]');
+      if (existingPopout) {
+        existingPopout.remove();
+      }
+      injectJsonPopoutButton(card, friendlyPost, username);
     }
   });
 }
@@ -406,6 +413,7 @@ function createFriendlyPost(tweetResult: any, user: any): FriendlyPost | null {
 
 /**
  * Extract and store follower data from JSON response
+ * Accumulates data from multiple requests as user scrolls
  */
 function extractAndLogPostData(data: any) {
   try {
@@ -413,8 +421,8 @@ function extractAndLogPostData(data: any) {
     
     console.log('📊 [Twitter Extension] Processing timeline with', instructions.length, 'instructions');
     
-    let postCount = 0;
-    const friendlyPosts: FriendlyPost[] = [];
+    let newPostsCount = 0;
+    const newFriendlyPosts: FriendlyPost[] = [];
     
     for (const instruction of instructions) {
       if (instruction.type === 'TimelineAddEntries' && instruction.entries) {
@@ -432,7 +440,7 @@ function extractAndLogPostData(data: any) {
             const followersCount = legacy?.followers_count;
             
             if (followersCount !== undefined && followersCount !== null && screenName) {
-              // Store in map
+              // Always store/update with latest data
               followerDataMap.set(screenName, {
                 name,
                 screenName,
@@ -442,13 +450,22 @@ function extractAndLogPostData(data: any) {
               // Create friendly post object
               const friendlyPost = createFriendlyPost(tweetResult, user);
               if (friendlyPost) {
-                friendlyPosts.push(friendlyPost);
-                // Store by username for easy lookup
+                // Store/update by username for easy lookup
+                const wasNew = !friendlyPostMap.has(screenName);
                 friendlyPostMap.set(screenName, friendlyPost);
-                postCount++;
                 
-                // Log friendly post object
-                console.log(`📝 Post ${postCount}:`, friendlyPost);
+                // Only count as new if we didn't have this user before
+                if (wasNew) {
+                  newFriendlyPosts.push(friendlyPost);
+                  newPostsCount++;
+                  totalPostsProcessed++;
+                  
+                  // Log friendly post object
+                  console.log(`📝 Post ${totalPostsProcessed} (@${screenName}):`, friendlyPost);
+                } else {
+                  // Update existing post silently (data refreshed)
+                  console.log(`🔄 Updated data for @${screenName}`);
+                }
               }
             }
           }
@@ -456,13 +473,16 @@ function extractAndLogPostData(data: any) {
       }
     }
     
-    console.log(`✅ [Twitter Extension] Extracted ${postCount} posts`);
-    console.log('📊 All Posts Summary:', friendlyPosts);
-    
-    // Process cards after extracting data
-    setTimeout(() => {
-      processAllCards();
-    }, 100);
+    if (newPostsCount > 0) {
+      console.log(`✅ [Twitter Extension] Added ${newPostsCount} new posts (Total: ${totalPostsProcessed})`);
+      
+      // Process all cards (including new ones) after extracting data
+      setTimeout(() => {
+        processAllCards();
+      }, 100);
+    } else {
+      console.log(`ℹ️ [Twitter Extension] No new posts in this batch (Total: ${totalPostsProcessed})`);
+    }
   } catch (error) {
     console.error('❌ [Twitter Extension] Error extracting post data:', error);
   }
