@@ -132,7 +132,7 @@ function processAllCards() {
   const cards = getCardsBySelector();
   
   cards.forEach((card) => {
-    injectFollowerCountToCard(card, followerDataMap, friendlyPostMap, newUsernames, detectedUsernames);
+    injectFollowerCountToCard(card, followerDataMap, newUsernames, detectedUsernames);
   });
 }
 

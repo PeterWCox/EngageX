@@ -1,7 +1,7 @@
 /**
  * Injection and rendering methods for tweet card elements
  * 
- * This module handles injecting follower count badges and JSON popout buttons
+ * This module handles injecting follower count badges
  * onto tweet cards in the Twitter timeline.
  */
 
@@ -70,182 +70,16 @@ function extractUsernameFromLink(link: HTMLAnchorElement): string | null {
 }
 
 /**
- * Inject JSON popout button and modal onto a tweet card
- */
-function injectJsonPopoutButton(card: Element, friendlyPost: FriendlyPost, username: string) {
-  // Find the action buttons area (where like, retweet, etc. are)
-  const actionButtons = card.querySelector('[role="group"]');
-  if (!actionButtons) return;
-  
-  // Create button container
-  const buttonContainer = document.createElement('div');
-  buttonContainer.className = 'css-175oi2r r-18u37iz r-1h0z5md r-13awgt0';
-  
-  // Create button
-  const button = document.createElement('button');
-  button.className = 'twitter-extension-json-button css-175oi2r r-1777fci r-bt1l66 r-bztko3 r-lrvibr r-1loqt21 r-1ny4l3l';
-  button.setAttribute('aria-label', 'View post metadata');
-  button.setAttribute('type', 'button');
-  button.style.cssText = `
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    padding: 0;
-  `;
-  
-  // Create button content
-  const buttonContent = document.createElement('div');
-  buttonContent.className = 'css-175oi2r r-xoduu5';
-  buttonContent.style.cssText = `
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgb(83, 100, 113);
-    transition: color 0.2s;
-  `;
-  
-  // Add hover effect
-  button.onmouseenter = () => {
-    buttonContent.style.color = 'rgb(29, 155, 240)';
-  };
-  button.onmouseleave = () => {
-    buttonContent.style.color = 'rgb(83, 100, 113)';
-  };
-  
-  // Create icon (JSON brackets)
-  const icon = document.createElement('div');
-  icon.textContent = '{}';
-  icon.style.cssText = `
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: bold;
-    line-height: 1;
-  `;
-  
-  buttonContent.appendChild(icon);
-  button.appendChild(buttonContent);
-  buttonContainer.appendChild(button);
-  
-  // Create popout modal
-  const popout = document.createElement('div');
-  popout.className = 'twitter-extension-json-popout';
-  popout.setAttribute('data-tweet-username', username);
-  popout.style.cssText = `
-    display: none;
-    position: absolute;
-    background: white;
-    border: 1px solid rgb(207, 217, 222);
-    border-radius: 16px;
-    box-shadow: rgba(101, 119, 134, 0.2) 0px 0px 15px, rgba(101, 119, 134, 0.15) 0px 0px 3px 1px;
-    padding: 16px;
-    max-width: 500px;
-    max-height: 400px;
-    overflow-y: auto;
-    z-index: 10000;
-    font-family: 'TwitterChirp', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
-  `;
-  
-  // Create close button
-  const closeButton = document.createElement('button');
-  closeButton.textContent = '×';
-  closeButton.style.cssText = `
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    color: rgb(83, 100, 113);
-    cursor: pointer;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.2s;
-  `;
-  closeButton.onmouseover = () => closeButton.style.backgroundColor = 'rgb(247, 249, 249)';
-  closeButton.onmouseout = () => closeButton.style.backgroundColor = 'transparent';
-  
-  // Create JSON display
-  const jsonDisplay = document.createElement('pre');
-  jsonDisplay.style.cssText = `
-    margin: 0;
-    padding: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    color: rgb(15, 20, 25);
-    font-size: 12px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  `;
-  jsonDisplay.textContent = JSON.stringify(friendlyPost, null, 2);
-  
-  popout.appendChild(closeButton);
-  popout.appendChild(jsonDisplay);
-  
-  // Position popout relative to card
-  const cardRect = card.getBoundingClientRect();
-  popout.style.top = `${cardRect.bottom + 8}px`;
-  popout.style.left = `${cardRect.left}px`;
-  
-  // Add to document body
-  document.body.appendChild(popout);
-  
-  // Toggle popout on button click
-  let isOpen = false;
-  button.onclick = (e) => {
-    e.stopPropagation();
-    isOpen = !isOpen;
-    
-    if (isOpen) {
-      // Update position
-      const rect = card.getBoundingClientRect();
-      popout.style.top = `${rect.bottom + 8}px`;
-      popout.style.left = `${rect.left}px`;
-      popout.style.display = 'block';
-    } else {
-      popout.style.display = 'none';
-    }
-  };
-  
-  // Close on close button click
-  closeButton.onclick = (e) => {
-    e.stopPropagation();
-    isOpen = false;
-    popout.style.display = 'none';
-  };
-  
-  // Close on outside click
-  document.addEventListener('click', (e) => {
-    if (isOpen && !popout.contains(e.target as Node) && !button.contains(e.target as Node)) {
-      isOpen = false;
-      popout.style.display = 'none';
-    }
-  });
-  
-  // Insert button into action buttons area
-  actionButtons.appendChild(buttonContainer);
-}
-
-/**
  * Inject follower count badge onto a tweet card
  * 
  * @param card - The tweet card element to inject into
  * @param followerDataMap - Map of username to follower data
- * @param friendlyPostMap - Map of username to friendly post data
  * @param newUsernames - Set of usernames that are new (not from cache)
  * @param detectedUsernames - Set of usernames that have been detected/shown
  */
 export function injectFollowerCountToCard(
   card: Element,
   followerDataMap: Map<string, FollowerData>,
-  friendlyPostMap: Map<string, FriendlyPost>,
   newUsernames?: Set<string>,
   detectedUsernames?: Set<string>
 ): void {
@@ -383,22 +217,6 @@ export function injectFollowerCountToCard(
         availableUsernames: Array.from(followerDataMap.keys()).slice(0, 10), // Show first 10 available usernames
         totalUsernamesInMap: followerDataMap.size
       });
-    }
-    
-    // Add/update JSON popout button if we have friendly post data
-    const friendlyPost = friendlyPostMap.get(username);
-    if (friendlyPost) {
-      // Remove existing button if it exists
-      const existingButton = card.querySelector('.twitter-extension-json-button');
-      if (existingButton) {
-        existingButton.closest('.css-175oi2r.r-18u37iz.r-1h0z5md.r-13awgt0')?.remove();
-      }
-      // Remove existing popout if it exists
-      const existingPopout = document.querySelector('.twitter-extension-json-popout[data-tweet-username="' + username + '"]');
-      if (existingPopout) {
-        existingPopout.remove();
-      }
-      injectJsonPopoutButton(card, friendlyPost, username);
     }
   });
 }

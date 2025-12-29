@@ -5,12 +5,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { injectFollowerCountToCard, FollowerData, FriendlyPost } from './index';
+import { injectFollowerCountToCard, FollowerData } from './index';
 
 describe('injectFollowerCountToCard', () => {
   let container: HTMLElement;
   let followerDataMap: Map<string, FollowerData>;
-  let friendlyPostMap: Map<string, FriendlyPost>;
 
   beforeEach(() => {
     // Create a fresh container for each test
@@ -19,7 +18,6 @@ describe('injectFollowerCountToCard', () => {
 
     // Initialize maps
     followerDataMap = new Map<string, FollowerData>();
-    friendlyPostMap = new Map<string, FriendlyPost>();
   });
 
   afterEach(() => {
@@ -56,7 +54,7 @@ describe('injectFollowerCountToCard', () => {
     });
 
     // Execute: Inject the follower count
-    injectFollowerCountToCard(card, followerDataMap, friendlyPostMap);
+    injectFollowerCountToCard(card, followerDataMap);
 
     // Assert: Badge should exist in the DOM
     const badge = container.querySelector('.twitter-extension-follower-badge');
@@ -88,7 +86,7 @@ describe('injectFollowerCountToCard', () => {
     });
 
     // Execute: Inject the follower count
-    injectFollowerCountToCard(card, followerDataMap, friendlyPostMap);
+    injectFollowerCountToCard(card, followerDataMap);
 
     // Assert: Badge should be visible with red background
     const badge = container.querySelector('.twitter-extension-follower-badge') as HTMLElement;

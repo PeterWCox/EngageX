@@ -3,7 +3,6 @@
   
   This file shows the HTML structure where elements are injected:
   1. Follower count badge - injected near the username
-  2. JSON popout button - injected in the action buttons area
   
   See card.html in the project root for a full example of a tweet card.
 -->
@@ -22,8 +21,6 @@
     <!-- Action buttons area -->
     <div role="group">
         <!-- Like, Retweet, Reply buttons -->
-        <!-- JSON popout button is injected here -->
-        <!-- <button class="twitter-extension-json-button">{}</button> -->
     </div>
 </article>
 
@@ -35,12 +32,6 @@
      - Injected: After username link or its parent container
      - Class: twitter-extension-follower-badge
      - Style: Red background, white text, rounded chip
-  
-  2. JSON Popout Button:
-     - Selector: [role="group"] -> finds action buttons area
-     - Injected: Appended to action buttons container
-     - Class: twitter-extension-json-button
-     - Creates: Button with {} icon and modal popout
   
   Full example available in: ../../card.html
 -->
