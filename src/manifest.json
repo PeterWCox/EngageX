@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Twitter Follower Count Extension",
+  "version": "1.0.0",
+  "description": "Display follower counts next to usernames on Twitter",
+  "permissions": [
+    "storage",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": ["content/content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Twitter Follower Count"
+  }
+}
+
