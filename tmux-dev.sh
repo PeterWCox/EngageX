@@ -29,6 +29,8 @@ tmux split-window -h -t "$SESSION_NAME:0" -c "$PROJECT_DIR" -l 70%
 
 # Build pane (left, 70% width) - Hot reload build
 tmux send-keys -t "$SESSION_NAME:0.0" "cd $PROJECT_DIR" C-m
+tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Cleaning dist directory...'" C-m
+tmux send-keys -t "$SESSION_NAME:0.0" "rm -rf dist" C-m
 tmux send-keys -t "$SESSION_NAME:0.0" "echo 'Starting Chrome Extension build (watch mode)...'" C-m
 tmux send-keys -t "$SESSION_NAME:0.0" "npm run dev" C-m
 tmux select-pane -t "$SESSION_NAME:0.0" -T "Build (Watch)"

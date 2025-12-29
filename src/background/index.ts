@@ -22,6 +22,7 @@ chrome.webRequest.onBeforeRequest.addListener(
         url: details.url,
         timestamp: new Date().toISOString(),
       });
+      console.log('ℹ️ [Background] Note: JSON response body will be logged in the PAGE console (F12 -> Console tab)');
     }
     
     // Return nothing to allow the request to proceed
@@ -42,6 +43,7 @@ chrome.webRequest.onCompleted.addListener(
         statusCode: details.statusCode,
         statusLine: details.statusLine,
       });
+      console.log('ℹ️ [Background] Check the PAGE console (not this background console) to see the full JSON response with tweet data');
     }
   },
   {
