@@ -1,0 +1,106 @@
+{
+  "description": "Reference JSON structure for Twitter API timeline response",
+  "note": "This shows the structure of data that the mapper functions process",
+  "example_structure": {
+    "data": {
+      "home": {
+        "home_timeline_urt": {
+          "instructions": [
+            {
+              "type": "TimelineAddEntries",
+              "entries": [
+                {
+                  "content": {
+                    "itemContent": {
+                      "tweet_results": {
+                        "result": {
+                          "legacy": {
+                            "full_text": "Tweet text content",
+                            "favorite_count": 100,
+                            "retweet_count": 50,
+                            "reply_count": 25,
+                            "created_at": "Mon Jan 01 00:00:00 +0000 2024"
+                          },
+                          "views": {
+                            "count": 1000
+                          },
+                          "core": {
+                            "user_results": {
+                              "result": {
+                                "legacy": {
+                                  "name": "User Name",
+                                  "screen_name": "username",
+                                  "followers_count": 10000,
+                                  "friends_count": 500,
+                                  "verified": false,
+                                  "description": "User bio description"
+                                },
+                                "core": {
+                                  "name": "User Name",
+                                  "screen_name": "username"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "mapping_details": {
+    "createFriendlyPost": {
+      "input": ["tweetResult", "user"],
+      "output": "FriendlyPost",
+      "fields_mapped": {
+        "user": {
+          "name": "core.name || legacy.name",
+          "handle": "@screen_name",
+          "followers": "legacy.followers_count",
+          "following": "legacy.friends_count",
+          "verified": "legacy.verified",
+          "description": "legacy.description (truncated to 100 chars)"
+        },
+        "tweet": {
+          "text": "legacy.full_text || legacy.text (truncated to 150 chars)",
+          "likes": "legacy.favorite_count",
+          "retweets": "legacy.retweet_count",
+          "replies": "legacy.reply_count",
+          "views": "views.count",
+          "createdAt": "legacy.created_at"
+        },
+        "engagement": {
+          "engagementRate": "calculated: (totalEngagements / followers) * 100",
+          "totalEngagements": "likes + retweets + replies"
+        }
+      }
+    },
+    "extractFollowerData": {
+      "input": ["user"],
+      "output": "FollowerData",
+      "fields_mapped": {
+        "name": "core.name || legacy.name",
+        "screenName": "core.screen_name || legacy.screen_name",
+        "followersCount": "legacy.followers_count"
+      }
+    },
+    "mapTimelineData": {
+      "input": ["data (full API response)"],
+      "output": {
+        "followerData": "Map<string, FollowerData>",
+        "friendlyPosts": "Map<string, FriendlyPost>",
+        "newPostsCount": "number",
+        "totalPostsProcessed": "number"
+      },
+      "process": "Iterates through instructions -> entries -> tweet_results, extracts and maps data"
+    }
+  },
+  "full_example": "See ../../../community-timeline.json for a complete example response"
+}
+
