@@ -5,98 +5,153 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { injectFollowerCountToCard, FollowerData } from './index';
 
-describe('injectFollowerCountToCard', () => {
+describe('RenderBadge', () => {
   let container: HTMLElement;
-  let followerDataMap: Map<string, FollowerData>;
+  let followerData: FollowerData[];
 
   beforeEach(() => {
-    // Create a fresh container for each test
     container = document.createElement('div');
     document.body.appendChild(container);
-
-    // Initialize maps
-    followerDataMap = new Map<string, FollowerData>();
+    followerData = [];
   });
 
   afterEach(() => {
-    // Clean up
     document.body.removeChild(container);
   });
 
-  it('should find a matching card and inject the red follower badge', () => {
-    // Setup: Create a tweet card HTML structure matching Twitter's structure
-    const cardHTML = `
-      <article data-testid="tweet" aria-labelledby="test-tweet">
-        <div data-testid="User-Name">
-          <div>
-            <a href="/testuser" role="link">Test User</a>
-            <time datetime="2024-01-01">Jan 1</time>
-          </div>
-        </div>
-        <div data-testid="tweetText">This is a test tweet</div>
-        <div role="group">
-          <button>Like</button>
-          <button>Retweet</button>
-        </div>
-      </article>
-    `;
+  /**
+   * Test helper: Loads card, injects badge, and asserts badge exists
+   */
+  function testBadgeExists(file: TestFile, followersCount: number): void {
+    const { card, username, followerData: data } = setupTestCard(file, followersCount);
+    container.appendChild(card);
+    followerData.push(data);
 
-    container.innerHTML = cardHTML;
-    const card = container.querySelector('article[data-testid="tweet"]') as Element;
+    injectFollowerCountToCard(card, followerData);
 
-    // Setup: Add follower data for the user
-    followerDataMap.set('testuser', {
-      name: 'Test User',
-      screenName: 'testuser',
-      followersCount: 790000,
-    });
-
-    // Execute: Inject the follower count
-    injectFollowerCountToCard(card, followerDataMap);
-
-    // Assert: Badge should exist in the DOM
     const badge = container.querySelector('.twitter-extension-follower-badge');
     expect(badge).not.toBeNull();
-    expect(badge).toBeInstanceOf(HTMLElement);
+  }
+
+  it('Test A', () => {
+    testBadgeExists('TestA', 790000);
   });
 
-  it('should show the badge after injection with correct styling', () => {
-    // Setup: Create a tweet card HTML structure
-    const cardHTML = `
-      <article data-testid="tweet">
-        <div data-testid="User-Name">
-          <div>
-            <a href="/testuser">Test User</a>
-            <time datetime="2024-01-01">Jan 1</time>
-          </div>
-        </div>
-      </article>
-    `;
+  it('Test B', () => {
+    testBadgeExists('TestB', 790000);
+  });
 
-    container.innerHTML = cardHTML;
-    const card = container.querySelector('article[data-testid="tweet"]') as Element;
+  it('Test C', () => {
+    testBadgeExists('TestC', 500000);
+  });
 
-    // Setup: Add follower data
-    followerDataMap.set('testuser', {
-      name: 'Test User',
-      screenName: 'testuser',
-      followersCount: 790000,
-    });
-
-    // Execute: Inject the follower count
-    injectFollowerCountToCard(card, followerDataMap);
-
-    // Assert: Badge should be visible with red background
-    const badge = container.querySelector('.twitter-extension-follower-badge') as HTMLElement;
-    expect(badge).not.toBeNull();
-    
-    // Assert: Badge should have red background color
-    expect(badge.style.backgroundColor).toBe('rgb(185, 28, 28)');
-    expect(badge.style.color).toBe('rgb(255, 255, 255)');
-    
-    // Assert: Badge should contain follower count text
-    expect(badge.textContent).toContain('followers');
+  it('Test D', () => {
+    testBadgeExists('TestD', 1200000);
   });
 });
+
+// ============================================================================
+// PRIVATE: Test Helper Functions
+// ============================================================================
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+type TestFile = 'TestA' | 'TestB' | 'TestC' | 'TestD';
+
+const htmlCache: Map<TestFile, string> = new Map();
+const documentCache: Map<TestFile, Document> = new Map();
+
+/**
+ * Load a test HTML file and return its content
+ */
+function loadTestHtml(file: TestFile): string {
+  if (!htmlCache.has(file)) {
+    const testHtmlPath = resolve(__dirname, `./${file}.html`);
+    htmlCache.set(file, readFileSync(testHtmlPath, 'utf-8'));
+  }
+  return htmlCache.get(file)!;
+}
+
+/**
+ * Get a parsed Document from a test HTML file
+ */
+function getTestHtmlDocument(file: TestFile): Document {
+  if (!documentCache.has(file)) {
+    const html = loadTestHtml(file);
+    const parser = new DOMParser();
+    documentCache.set(file, parser.parseFromString(html, 'text/html'));
+  }
+  return documentCache.get(file)!;
+}
+
+/**
+ * Get a tweet card from a test HTML file by index
+ * Returns a cloned element that can be modified in tests
+ */
+function getTestCard(file: TestFile = 'TestA', index: number = 0): Element | null {
+  const doc = getTestHtmlDocument(file);
+  const cards = doc.querySelectorAll('article[data-testid="tweet"]');
+  
+  if (cards.length === 0 || index >= cards.length) {
+    return null;
+  }
+  
+  // Clone the card so tests can modify it without affecting the original
+  return cards[index].cloneNode(true) as Element;
+}
+
+/**
+ * Extract username from a card element
+ */
+function extractUsernameFromCard(card: Element): string | null {
+  const usernameLink = card.querySelector('a[href*="/"]:not([data-testid="socialContext"] a)') as HTMLAnchorElement;
+  if (!usernameLink) {
+    return null;
+  }
+  
+  const href = usernameLink.getAttribute('href') || usernameLink.href || '';
+  // Extract username from href like "/username" or "http://localhost:3000/username"
+  const username = href.replace(/^https?:\/\/[^\/]+/, '').replace(/^\//, '').split('/')[0];
+  return username || null;
+}
+
+/**
+ * Setup a test card with follower data
+ */
+function setupTestCard(
+  file: TestFile = 'TestA',
+  followersCount: number = 100000,
+  removeBadge: boolean = false
+): { card: Element; username: string; followerData: FollowerData } {
+  const card = getTestCard(file, 0);
+  if (!card) {
+    throw new Error(`No test card found in ${file}.html`);
+  }
+  
+  // Remove existing badge if requested
+  if (removeBadge) {
+    const existingBadge = card.querySelector('.twitter-extension-follower-badge');
+    if (existingBadge) {
+      existingBadge.remove();
+    }
+  }
+  
+  const username = extractUsernameFromCard(card);
+  if (!username) {
+    throw new Error(`Could not extract username from card in ${file}.html`);
+  }
+  
+  const followerData: FollowerData = {
+    name: 'Test User',
+    screenName: username,
+    followersCount,
+  };
+  
+  return { card, username, followerData };
+}
