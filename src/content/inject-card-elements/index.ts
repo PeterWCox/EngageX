@@ -94,7 +94,8 @@ export function matchCardAndApplyCSS(
   let matchedUsernameInfo: { username: string; anchor: HTMLAnchorElement; container: Element } | null = null;
 
   for (const info of usernameData) {
-    const userDataItem = userData.find(f => f.screenName === info.username);
+    // Case-insensitive comparison - Twitter usernames are case-insensitive
+    const userDataItem = userData.find(f => f.screenName.toLowerCase() === info.username.toLowerCase());
     if (userDataItem) {
       matchedUsername = info.username;
       matchedUserData = userDataItem;

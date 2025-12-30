@@ -1,0 +1,26 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1DA1F2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d8bd9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded square background -->
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bgGradient)"/>
+  
+  <!-- Badge shape (white) -->
+  <rect x="32" y="32" width="64" height="64" rx="12" fill="#FFFFFF"/>
+  
+  <!-- Engagement badge icon (green circle with checkmark) -->
+  <circle cx="64" cy="52" r="14" fill="#22C55E"/>
+  <path d="M 58 52 L 62 56 L 70 48" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Lightning bolt for engagement -->
+  <path d="M 52 72 L 58 72 L 60 82 L 68 76 L 66 82 L 76 82 L 74 72 L 82 72 L 74 64 Z" fill="#F59E0B"/>
+  
+  <!-- Small notification indicator -->
+  <circle cx="88" cy="40" r="6" fill="#EF4444"/>
+</svg>
+

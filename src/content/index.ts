@@ -8,6 +8,12 @@ let _onTimelineData: ((data: any) => void) | null = null;
 window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
   const url = input?.toString() || '';
   const response = await _originalFetch.call(this, input, init);
+  
+  // Log other Timeline endpoints we might be missing
+  if (url.includes('/graphql/') && url.includes('Timeline') && !url.includes('HomeLatestTimeline') && !url.includes('HomeTimeline')) {
+    console.log('🔍 Other Timeline endpoint detected (not captured):', url.match(/\/graphql\/[^/]+\/([^?]+)/)?.[1] || url);
+  }
+  
   if (url.includes('HomeLatestTimeline') || url.includes('HomeTimeline')) {
     console.log('✅ Timeline intercepted (fetch):', url);
     try {
@@ -40,7 +46,7 @@ XMLHttpRequest.prototype.send = function() {
 console.log('✅ Interceptors installed EARLY');
 
 // Now import the rest
-import { getTweetCards, getTweetCardsContainer, mapTimelineData } from './helpers';
+import { getTweetCards, getTweetCardsContainer, mapTimelineData, extractUsernameFromLink } from './helpers';
 import { injectFollowerCountToCard, FollowerData, TweetData } from './inject-card-elements';
 
 console.log('%c🚀 TWITTER EXTENSION LOADED 🚀', 'font-size: 20px; font-weight: bold; color: #1DA1F2; background: #000; padding: 10px; border-radius: 5px;');
@@ -48,6 +54,70 @@ console.log('%cBuild timestamp: ' + new Date().toISOString(), 'font-size: 12px; 
 
 const userData: FollowerData[] = [];
 const tweetData: TweetData[] = [];
+
+// Debug function to compare API data vs DOM cards
+function debugMatchingIssues() {
+  const cards = getTweetCards();
+  
+  // Extract usernames from all visible cards
+  const cardUsernames: Array<{ username: string; tweetText: string }> = [];
+  cards.forEach((card) => {
+    const userNameContainers = card.querySelectorAll('[data-testid="User-Name"]');
+    for (const container of userNameContainers) {
+      const links = container.querySelectorAll('a[href^="/"]');
+      for (const link of links) {
+        const linkAnchor = link as HTMLAnchorElement;
+        if (linkAnchor.closest('[data-testid="socialContext"]')) continue;
+        
+        const username = extractUsernameFromLink(linkAnchor);
+        if (username) {
+          const tweetText = card.querySelector('[data-testid="tweetText"]')?.textContent?.substring(0, 40) || 'N/A';
+          cardUsernames.push({ username, tweetText });
+          break; // Only first username per card
+        }
+      }
+    }
+  });
+  
+  // Get unique usernames from cards (lowercase for comparison)
+  const uniqueCardUsernames = [...new Set(cardUsernames.map(c => c.username))];
+  
+  // Get usernames from API
+  const apiUsernames = userData.map(u => u.screenName);
+  const apiUsernamesLower = apiUsernames.map(u => u.toLowerCase());
+  
+  // Find mismatches (case-insensitive)
+  const inCardNotInApi = uniqueCardUsernames.filter(u => !apiUsernamesLower.includes(u.toLowerCase()));
+  const inApiNotInCard = apiUsernames.filter(u => !uniqueCardUsernames.map(c => c.toLowerCase()).includes(u.toLowerCase()));
+  const matched = uniqueCardUsernames.filter(u => apiUsernamesLower.includes(u.toLowerCase()));
+  
+  console.log('%c📊 MATCHING DEBUG REPORT', 'font-size: 16px; font-weight: bold; color: #f59e0b; background: #000; padding: 8px;');
+  console.log({
+    summary: {
+      cardsInDOM: cards.length,
+      uniqueUsernamesInCards: uniqueCardUsernames.length,
+      usernamesFromAPI: apiUsernames.length,
+      matched: matched.length,
+      missingFromAPI: inCardNotInApi.length,
+    },
+    allCardsWithUsernames: cardUsernames,
+    allAPIUsernames: apiUsernames.sort(),
+    matched: matched.sort(),
+    inCardButNotInAPI: inCardNotInApi.sort(),
+    inAPIButNotInCard: inApiNotInCard.sort(),
+  });
+  
+  return {
+    cardUsernames,
+    apiUsernames,
+    matched,
+    inCardNotInApi,
+    inApiNotInCard,
+  };
+}
+
+// Expose debug function globally
+(window as any).debugTwitterExtension = debugMatchingIssues;
 
 function processAllCards() {
   const cards = getTweetCards();

@@ -106,6 +106,146 @@ export interface TimelineDataResult {
   tweets: TweetData[];
 }
 
+// Helper to extract user data from a userResult object
+function extractUserFromResult(
+  userResult: any,
+  seenUsers: Set<string>,
+  users: FollowerData[]
+): void {
+  if (!userResult) return;
+  
+  const legacy = userResult.legacy || {};
+  const core = userResult.core || {};
+  
+  const screenName = core?.screen_name || legacy?.screen_name || '';
+  
+  if (screenName && !seenUsers.has(screenName)) {
+    seenUsers.add(screenName);
+    
+    const followersCount = legacy?.followers_count || 0;
+    const followingCount = legacy?.friends_count || 0;
+    
+    users.push({
+      name: core?.name || legacy?.name || 'Unknown',
+      screenName,
+      followersCount,
+      followingCount,
+      tweetsCount: legacy?.statuses_count || 0,
+      listedCount: legacy?.listed_count || 0,
+      isVerified: userResult.is_blue_verified || false,
+      accountCreatedAt: core?.created_at || '',
+      followerRatio: followingCount > 0 ? followersCount / followingCount : followersCount,
+    });
+  }
+}
+
+// Helper to extract tweet data
+function extractTweetFromResult(
+  tweetResult: any,
+  seenTweets: Set<string>,
+  tweets: TweetData[]
+): void {
+  if (!tweetResult) return;
+  
+  const tweetLegacy = tweetResult.legacy;
+  const tweetId = tweetResult.rest_id;
+  
+  if (tweetLegacy && tweetId && !seenTweets.has(tweetId)) {
+    seenTweets.add(tweetId);
+    
+    const userResult = tweetResult.core?.user_results?.result;
+    const screenName = userResult?.core?.screen_name || userResult?.legacy?.screen_name || '';
+    const followersCount = userResult?.legacy?.followers_count || 0;
+    
+    const createdAt = tweetLegacy.created_at || '';
+    const ageMinutes = calculateTweetAgeMinutes(createdAt);
+    const replyCount = tweetLegacy.reply_count || 0;
+    const viewCount = tweetResult.views?.count ? parseInt(tweetResult.views.count) : null;
+    
+    tweets.push({
+      tweetId,
+      screenName,
+      replyCount,
+      retweetCount: tweetLegacy.retweet_count || 0,
+      likeCount: tweetLegacy.favorite_count || 0,
+      quoteCount: tweetLegacy.quote_count || 0,
+      viewCount,
+      bookmarkCount: tweetLegacy.bookmark_count || 0,
+      createdAt,
+      ageMinutes,
+      engagementOpportunityScore: calculateEngagementScore(
+        followersCount,
+        replyCount,
+        ageMinutes,
+        viewCount
+      ),
+    });
+  }
+}
+
+// Recursively process a tweet result and all nested tweets (retweets, quotes)
+function processTweetResult(
+  tweetResult: any,
+  seenUsers: Set<string>,
+  seenTweets: Set<string>,
+  users: FollowerData[],
+  tweets: TweetData[]
+): void {
+  if (!tweetResult) return;
+  
+  // Extract main tweet's user
+  extractUserFromResult(tweetResult.core?.user_results?.result, seenUsers, users);
+  
+  // Extract main tweet data
+  extractTweetFromResult(tweetResult, seenTweets, tweets);
+  
+  // Handle retweets - extract the original author
+  const retweetedResult = tweetResult.legacy?.retweeted_status_result?.result;
+  if (retweetedResult) {
+    extractUserFromResult(retweetedResult.core?.user_results?.result, seenUsers, users);
+    extractTweetFromResult(retweetedResult, seenTweets, tweets);
+    
+    // Retweet might also have a quoted tweet
+    const retweetQuotedResult = retweetedResult.quoted_status_result?.result;
+    if (retweetQuotedResult) {
+      extractUserFromResult(retweetQuotedResult.core?.user_results?.result, seenUsers, users);
+      extractTweetFromResult(retweetQuotedResult, seenTweets, tweets);
+    }
+  }
+  
+  // Handle quote tweets - extract the quoted author
+  const quotedResult = tweetResult.quoted_status_result?.result;
+  if (quotedResult) {
+    extractUserFromResult(quotedResult.core?.user_results?.result, seenUsers, users);
+    extractTweetFromResult(quotedResult, seenTweets, tweets);
+  }
+}
+
+// Deep search for all screen_name fields in the API response (for debugging)
+function findAllUsernamesInResponse(obj: any, found: Set<string> = new Set(), path: string = ''): Set<string> {
+  if (obj === null || obj === undefined) return found;
+  
+  if (typeof obj === 'object') {
+    if (Array.isArray(obj)) {
+      obj.forEach((item, i) => findAllUsernamesInResponse(item, found, `${path}[${i}]`));
+    } else {
+      // Check for screen_name field
+      if (obj.screen_name && typeof obj.screen_name === 'string') {
+        found.add(obj.screen_name);
+      }
+      
+      // Recursively search all properties
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          findAllUsernamesInResponse(obj[key], found, path ? `${path}.${key}` : key);
+        }
+      }
+    }
+  }
+  
+  return found;
+}
+
 export function mapTimelineData(data: any): TimelineDataResult {
   const users: FollowerData[] = [];
   const tweets: TweetData[] = [];
@@ -115,82 +255,53 @@ export function mapTimelineData(data: any): TimelineDataResult {
   try {
     const instructions = data?.data?.home?.home_timeline_urt?.instructions || [];
     
+    // Deep search for ALL usernames in the response (for debugging)
+    const allUsernamesInResponse = findAllUsernamesInResponse(data);
+    
+    const entryTypes = new Set<string>();
+    
     for (const instruction of instructions) {
+      entryTypes.add(instruction.type || 'unknown');
+      
       if (instruction.type === 'TimelineAddEntries' && instruction.entries) {
         for (const entry of instruction.entries) {
+          // Handle regular timeline items
           const tweetResult = entry.content?.itemContent?.tweet_results?.result;
-          
           if (tweetResult) {
-            // Extract user data
-            const userResult = tweetResult.core?.user_results?.result;
-            if (userResult) {
-              const legacy = userResult.legacy || {};
-              const core = userResult.core || {};
-              
-              const screenName = core?.screen_name || legacy?.screen_name || '';
-              
-              if (screenName && !seenUsers.has(screenName)) {
-                seenUsers.add(screenName);
-                
-                const followersCount = legacy?.followers_count || 0;
-                const followingCount = legacy?.friends_count || 0;
-                
-                users.push({
-                  name: core?.name || legacy?.name || 'Unknown',
-                  screenName,
-                  followersCount,
-                  followingCount,
-                  tweetsCount: legacy?.statuses_count || 0,
-                  listedCount: legacy?.listed_count || 0,
-                  isVerified: userResult.is_blue_verified || false,
-                  accountCreatedAt: core?.created_at || '',
-                  followerRatio: followingCount > 0 ? followersCount / followingCount : followersCount,
-                });
+            processTweetResult(tweetResult, seenUsers, seenTweets, users, tweets);
+          }
+          
+          // Handle TimelineTimelineModule entries (conversation threads, etc.)
+          if (entry.content?.entryType === 'TimelineTimelineModule' && entry.content?.items) {
+            for (const item of entry.content.items) {
+              const moduleTweetResult = item?.item?.itemContent?.tweet_results?.result;
+              if (moduleTweetResult) {
+                processTweetResult(moduleTweetResult, seenUsers, seenTweets, users, tweets);
               }
-            }
-            
-            // Extract tweet data
-            const tweetLegacy = tweetResult.legacy;
-            const tweetId = tweetResult.rest_id;
-            
-            if (tweetLegacy && tweetId && !seenTweets.has(tweetId)) {
-              seenTweets.add(tweetId);
-              
-              const userResult = tweetResult.core?.user_results?.result;
-              const screenName = userResult?.core?.screen_name || userResult?.legacy?.screen_name || '';
-              const followersCount = userResult?.legacy?.followers_count || 0;
-              
-              const createdAt = tweetLegacy.created_at || '';
-              const ageMinutes = calculateTweetAgeMinutes(createdAt);
-              const replyCount = tweetLegacy.reply_count || 0;
-              const viewCount = tweetResult.views?.count ? parseInt(tweetResult.views.count) : null;
-              
-              tweets.push({
-                tweetId,
-                screenName,
-                replyCount,
-                retweetCount: tweetLegacy.retweet_count || 0,
-                likeCount: tweetLegacy.favorite_count || 0,
-                quoteCount: tweetLegacy.quote_count || 0,
-                viewCount,
-                bookmarkCount: tweetLegacy.bookmark_count || 0,
-                createdAt,
-                ageMinutes,
-                engagementOpportunityScore: calculateEngagementScore(
-                  followersCount,
-                  replyCount,
-                  ageMinutes,
-                  viewCount
-                ),
-              });
             }
           }
         }
       }
     }
     
+    // Log entry types we're processing
+    if (entryTypes.size > 0) {
+      console.log('📝 [Twitter Extension] Entry types found:', Array.from(entryTypes).sort());
+    }
+    
     if (users.length > 0) {
+      const extractedUsernames = new Set(users.map(u => u.screenName));
+      const missingUsernames = Array.from(allUsernamesInResponse).filter(u => !extractedUsernames.has(u));
+      
       console.log(`✅ [Twitter Extension] Extracted ${users.length} users, ${tweets.length} tweets`);
+      
+      // Log if we found usernames in API that we didn't extract
+      if (missingUsernames.length > 0) {
+        console.warn(`⚠️ [Twitter Extension] Found ${missingUsernames.length} usernames in API response that weren't extracted:`, missingUsernames);
+      }
+      
+      // Log all usernames found in API (for debugging)
+      console.log('📋 [Twitter Extension] All usernames found in API response:', Array.from(allUsernamesInResponse).sort());
     }
   } catch (error) {
     console.error('❌ [Twitter Extension] Error mapping timeline data:', error);
