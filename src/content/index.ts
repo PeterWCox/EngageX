@@ -138,21 +138,29 @@ function extractAndStoreTimelineData(data: any) {
   try {
     const { users, tweets } = mapTimelineData(data);
     
-    // Add new users
+    // Add new users (case-insensitive check)
     let newUserCount = 0;
     for (const user of users) {
-      if (!userData.find(u => u.screenName === user.screenName)) {
+      const existingUser = userData.find(u => u.screenName.toLowerCase() === user.screenName.toLowerCase());
+      if (!existingUser) {
         userData.push(user);
         newUserCount++;
+      } else {
+        // Update existing user data if we have newer/more complete info
+        Object.assign(existingUser, user);
       }
     }
     
     // Add new tweets
     let newTweetCount = 0;
     for (const tweet of tweets) {
-      if (!tweetData.find(t => t.tweetId === tweet.tweetId)) {
+      const existingTweet = tweetData.find(t => t.tweetId === tweet.tweetId);
+      if (!existingTweet) {
         tweetData.push(tweet);
         newTweetCount++;
+      } else {
+        // Update existing tweet data (engagement scores may change)
+        Object.assign(existingTweet, tweet);
       }
     }
     
@@ -174,11 +182,12 @@ function extractAndStoreTimelineData(data: any) {
           age: `${Math.round(t.ageMinutes / 60)}h`,
         })));
       }
-      
-      setTimeout(() => {
-        processAllCards();
-      }, 100);
     }
+    
+    // Always re-process all cards when new data arrives (in case DOM was replaced)
+    setTimeout(() => {
+      processAllCards();
+    }, 100);
   } catch (error) {
     console.error('❌ [Twitter Extension] Error extracting timeline data:', error);
   }
@@ -189,15 +198,22 @@ _onTimelineData = extractAndStoreTimelineData;
 
 // Set up MutationObserver to watch the timeline for new cards
 let _observerSetUp = false;
+let _currentObserver: MutationObserver | null = null;
 
 function setupTimelineObserver() {
-  if (_observerSetUp) return; // Prevent duplicate observers
+  // Disconnect previous observer if it exists
+  if (_currentObserver) {
+    _currentObserver.disconnect();
+    _currentObserver = null;
+  }
   
   const timeline = getTweetCardsContainer();
   
   if (timeline) {
-    _observerSetUp = true;
-    console.log('✅ [Twitter Extension] Found timeline container, setting up observer');
+    if (!_observerSetUp) {
+      _observerSetUp = true;
+      console.log('✅ [Twitter Extension] Found timeline container, setting up observer');
+    }
     
     const observer = new MutationObserver((mutations) => {
       let shouldProcess = false;
@@ -230,21 +246,70 @@ function setupTimelineObserver() {
       subtree: true,
     });
     
+    _currentObserver = observer;
+    
     // Process existing cards
     processAllCards();
   } else {
     // Timeline not found yet, try again after a delay
-    console.log('⏳ [Twitter Extension] Timeline not found yet, retrying...');
+    if (!_observerSetUp) {
+      console.log('⏳ [Twitter Extension] Timeline not found yet, retrying...');
+    }
     setTimeout(setupTimelineObserver, 1000);
   }
 }
 
+// Watch for tab changes and re-process cards
+function setupTabChangeWatcher() {
+  // Watch for clicks on tab buttons
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    // Check if clicked element is a tab or inside a tab
+    if (target.closest('[role="tab"]') || target.getAttribute('role') === 'tab') {
+      // Tab change detected, re-process after a short delay
+      setTimeout(() => {
+        setupTimelineObserver(); // Re-setup observer in case container changed
+        setTimeout(() => {
+          processAllCards(); // Process all cards with existing state
+        }, 500);
+      }, 100);
+    }
+  }, true); // Use capture phase to catch early
+  
+  // Also watch for URL changes (SPA navigation)
+  let lastUrl = location.href;
+  new MutationObserver(() => {
+    const url = location.href;
+    if (url !== lastUrl) {
+      lastUrl = url;
+      setTimeout(() => {
+        setupTimelineObserver();
+        setTimeout(() => {
+          processAllCards();
+        }, 500);
+      }, 100);
+    }
+  }).observe(document, { subtree: true, childList: true });
+  
+  // Periodic re-processing to catch any missed updates (every 2 seconds)
+  setInterval(() => {
+    if (getTweetCards().length > 0) {
+      processAllCards();
+    }
+  }, 2000);
+}
+
 // Initialize: Set up observers
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupTimelineObserver);
+  document.addEventListener('DOMContentLoaded', () => {
+    setupTimelineObserver();
+    setupTabChangeWatcher();
+  });
 } else {
   setupTimelineObserver();
+  setupTabChangeWatcher();
 }
 
 // Also set up observer after a delay in case timeline loads later
 setTimeout(setupTimelineObserver, 2000);
+setTimeout(setupTabChangeWatcher, 2000);

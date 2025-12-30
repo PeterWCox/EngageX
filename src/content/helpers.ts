@@ -4,11 +4,26 @@ export function getTweetCards(): NodeListOf<Element> {
 }
 
 export function getTweetCardsContainer(): HTMLElement | undefined {
+    // Try to find any timeline container (Home, Community, etc.)
     const timelines = Array.from(document.querySelectorAll('div[aria-label*="Timeline"]'));
-    return timelines.find((el) => {
+    
+    // Prefer Home Timeline, but accept any timeline
+    const homeTimeline = timelines.find((el) => {
       const label = el.getAttribute('aria-label');
       return label && label.includes('Home Timeline');
-    }) as HTMLElement | undefined;
+    });
+    
+    if (homeTimeline) return homeTimeline as HTMLElement;
+    
+    // Fallback to any timeline container
+    if (timelines.length > 0) {
+      return timelines[0] as HTMLElement;
+    }
+    
+    // Last resort: look for main content area with tweets
+    const mainContent = document.querySelector('main[role="main"]') || 
+                        document.querySelector('[data-testid="primaryColumn"]');
+    return mainContent as HTMLElement | undefined;
 }
 
 // Formatting
