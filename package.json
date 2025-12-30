@@ -1,15 +1,16 @@
 {
-  "name": "twitter-extension",
+  "name": "engagex",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch --mode development",
+    "dev": "rm -rf dist && vite build --watch --mode development",
     "build": "vite build",
     "dev:watch": "node scripts/watch-manifest.js",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "zip": "zip -r engagex.zip . -x \"node_modules/*\" \"dist/*\" \".git/*\" \"*.zip\" \".DS_Store\" \"*.log\""
   },
   "dependencies": {
     "react": "^18.2.0",
