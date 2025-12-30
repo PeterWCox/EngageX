@@ -198,6 +198,8 @@ _onTimelineData = extractAndStoreTimelineData;
 // Set up MutationObserver to watch the timeline for new cards
 let _observerSetUp = false;
 let _currentObserver: MutationObserver | null = null;
+let _retryCount = 0;
+const MAX_RETRIES = 10;
 
 function setupTimelineObserver() {
   // Disconnect previous observer if it exists
@@ -209,6 +211,9 @@ function setupTimelineObserver() {
   const timeline = getTweetCardsContainer();
   
   if (timeline) {
+    // Reset retry count on success
+    _retryCount = 0;
+    
     if (!_observerSetUp) {
       _observerSetUp = true;
       // console.log('✅ [EngageX] Found timeline container, setting up observer');
@@ -251,8 +256,15 @@ function setupTimelineObserver() {
     processAllCards();
   } else {
     // Timeline not found yet, try again after a delay
+    _retryCount++;
+    
+    if (_retryCount > MAX_RETRIES) {
+      // console.log(`❌ [EngageX] Timeline container not found after ${MAX_RETRIES} attempts. Giving up.`);
+      return;
+    }
+    
     if (!_observerSetUp) {
-      // console.log('⏳ [EngageX] Timeline not found yet, retrying...');
+      // console.log(`⏳ [EngageX] Timeline not found yet, retrying... (${_retryCount}/${MAX_RETRIES})`);
     }
     setTimeout(setupTimelineObserver, 1000);
   }
