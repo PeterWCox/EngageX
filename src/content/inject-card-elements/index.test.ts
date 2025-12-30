@@ -34,7 +34,7 @@ describe('RenderBadge', () => {
 
     injectFollowerCountToCard(card, followerData);
 
-    const badge = container.querySelector('.twitter-extension-follower-badge');
+    const badge = container.querySelector('.engagex-follower-badge');
     expect(badge).not.toBeNull();
   }
 
@@ -136,7 +136,7 @@ function setupTestCard(
   
   // Remove existing badge if requested
   if (removeBadge) {
-    const existingBadge = card.querySelector('.twitter-extension-follower-badge');
+    const existingBadge = card.querySelector('.engagex-follower-badge');
     if (existingBadge) {
       existingBadge.remove();
     }

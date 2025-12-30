@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Smart engagement badges show when it's the best time to reply. See follower counts and engagement opportunities at a glance.",
   "author": "Peter Cox",
-  "homepage_url": "https://github.com/yourusername/twitter-extension",
+  "homepage_url": "https://github.com/PeterWCox/EngageX",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

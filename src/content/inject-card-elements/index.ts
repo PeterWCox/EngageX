@@ -234,13 +234,13 @@ export function injectFollowerCountToCard(
     if (!matchingData) {
       const tweetText = card.querySelector('[data-testid="tweetText"]')?.textContent?.substring(0, 50) || 'N/A';
       
-      console.warn('⚠️ [Twitter Extension] Card cannot find matching JSON to show followers:', {
-        username: `@${firstUsername}`,
-        tweetId: tweetId || 'unknown',
-        tweetTextPreview: tweetText,
-        availableUsernames: userData.map(f => f.screenName),
-        totalUserData: userData.length
-      });
+      // console.warn('⚠️ [EngageX] Card cannot find matching JSON to show followers:', {
+      //   username: `@${firstUsername}`,
+      //   tweetId: tweetId || 'unknown',
+      //   tweetTextPreview: tweetText,
+      //   availableUsernames: userData.map(f => f.screenName),
+      //   totalUserData: userData.length
+      // });
     }
   }
 }

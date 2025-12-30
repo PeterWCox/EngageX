@@ -14,17 +14,17 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
       !url.includes('HomeLatestTimeline') && 
       !url.includes('HomeTimeline') && 
       !url.includes('CommunityTweetsTimeline')) {
-    console.log('🔍 Other Timeline endpoint detected (not captured):', url.match(/\/graphql\/[^/]+\/([^?]+)/)?.[1] || url);
+    // console.log('🔍 Other Timeline endpoint detected (not captured):', url.match(/\/graphql\/[^/]+\/([^?]+)/)?.[1] || url);
   }
   
   if (url.includes('HomeLatestTimeline') || 
       url.includes('HomeTimeline') || 
       url.includes('CommunityTweetsTimeline')) {
-    console.log('✅ Timeline intercepted (fetch):', url);
+    // console.log('✅ Timeline intercepted (fetch):', url);
     try {
       const data = await response.clone().json();
       if (_onTimelineData) _onTimelineData(data);
-    } catch (e) { console.error('Parse error:', e); }
+    } catch (e) { /* console.error('Parse error:', e); */ }
   }
   return response;
 };
@@ -39,12 +39,12 @@ XMLHttpRequest.prototype.send = function() {
   if (url.includes('HomeLatestTimeline') || 
       url.includes('HomeTimeline') || 
       url.includes('CommunityTweetsTimeline')) {
-    console.log('✅ Timeline intercepted (XHR):', url);
+    // console.log('✅ Timeline intercepted (XHR):', url);
     this.addEventListener('load', function() {
       try {
         const data = JSON.parse(this.responseText);
         if (_onTimelineData) _onTimelineData(data);
-      } catch (e) { console.error('Parse error:', e); }
+      } catch (e) { /* console.error('Parse error:', e); */ }
     });
   }
   return _originalXHRSend.apply(this, arguments as any);
@@ -56,8 +56,7 @@ console.log('✅ Interceptors installed EARLY');
 import { getTweetCards, getTweetCardsContainer, mapTimelineData, extractUsernameFromLink } from './helpers';
 import { injectFollowerCountToCard, FollowerData, TweetData } from './inject-card-elements';
 
-console.log('%c🚀 TWITTER EXTENSION LOADED 🚀', 'font-size: 20px; font-weight: bold; color: #1DA1F2; background: #000; padding: 10px; border-radius: 5px;');
-console.log('%cBuild timestamp: ' + new Date().toISOString(), 'font-size: 12px; color: #666;');
+console.log('%c🚀 ENGAGEX LOADED 🚀', 'font-size: 20px; font-weight: bold; color: #1DA1F2; background: #000; padding: 10px; border-radius: 5px;');
 
 const userData: FollowerData[] = [];
 const tweetData: TweetData[] = [];
@@ -98,21 +97,21 @@ function debugMatchingIssues() {
   const inApiNotInCard = apiUsernames.filter(u => !uniqueCardUsernames.map(c => c.toLowerCase()).includes(u.toLowerCase()));
   const matched = uniqueCardUsernames.filter(u => apiUsernamesLower.includes(u.toLowerCase()));
   
-  console.log('%c📊 MATCHING DEBUG REPORT', 'font-size: 16px; font-weight: bold; color: #f59e0b; background: #000; padding: 8px;');
-  console.log({
-    summary: {
-      cardsInDOM: cards.length,
-      uniqueUsernamesInCards: uniqueCardUsernames.length,
-      usernamesFromAPI: apiUsernames.length,
-      matched: matched.length,
-      missingFromAPI: inCardNotInApi.length,
-    },
-    allCardsWithUsernames: cardUsernames,
-    allAPIUsernames: apiUsernames.sort(),
-    matched: matched.sort(),
-    inCardButNotInAPI: inCardNotInApi.sort(),
-    inAPIButNotInCard: inApiNotInCard.sort(),
-  });
+  // console.log('%c📊 MATCHING DEBUG REPORT', 'font-size: 16px; font-weight: bold; color: #f59e0b; background: #000; padding: 8px;');
+  // console.log({
+  //   summary: {
+  //     cardsInDOM: cards.length,
+  //     uniqueUsernamesInCards: uniqueCardUsernames.length,
+  //     usernamesFromAPI: apiUsernames.length,
+  //     matched: matched.length,
+  //     missingFromAPI: inCardNotInApi.length,
+  //   },
+  //   allCardsWithUsernames: cardUsernames,
+  //   allAPIUsernames: apiUsernames.sort(),
+  //   matched: matched.sort(),
+  //   inCardButNotInAPI: inCardNotInApi.sort(),
+  //   inAPIButNotInCard: inApiNotInCard.sort(),
+  // });
   
   return {
     cardUsernames,
@@ -124,7 +123,7 @@ function debugMatchingIssues() {
 }
 
 // Expose debug function globally
-(window as any).debugTwitterExtension = debugMatchingIssues;
+(window as any).debugEngageX = debugMatchingIssues;
 
 function processAllCards() {
   const cards = getTweetCards();
@@ -165,7 +164,7 @@ function extractAndStoreTimelineData(data: any) {
     }
     
     if (newUserCount > 0 || newTweetCount > 0) {
-      console.log(`✅ [Twitter Extension] Added ${newUserCount} users, ${newTweetCount} tweets (Total: ${userData.length} users, ${tweetData.length} tweets)`);
+      // console.log(`✅ [EngageX] Added ${newUserCount} users, ${newTweetCount} tweets (Total: ${userData.length} users, ${tweetData.length} tweets)`);
       
       // Log high-opportunity tweets
       const hotTweets = tweets
@@ -174,13 +173,13 @@ function extractAndStoreTimelineData(data: any) {
         .slice(0, 5);
       
       if (hotTweets.length > 0) {
-        console.log('🔥 High engagement opportunities:', hotTweets.map(t => ({
-          user: `@${t.screenName}`,
-          score: Math.round(t.engagementOpportunityScore),
-          replies: t.replyCount,
-          views: t.viewCount?.toLocaleString() || 'N/A',
-          age: `${Math.round(t.ageMinutes / 60)}h`,
-        })));
+        // console.log('🔥 High engagement opportunities:', hotTweets.map(t => ({
+        //   user: `@${t.screenName}`,
+        //   score: Math.round(t.engagementOpportunityScore),
+        //   replies: t.replyCount,
+        //   views: t.viewCount?.toLocaleString() || 'N/A',
+        //   age: `${Math.round(t.ageMinutes / 60)}h`,
+        // })));
       }
     }
     
@@ -189,7 +188,7 @@ function extractAndStoreTimelineData(data: any) {
       processAllCards();
     }, 100);
   } catch (error) {
-    console.error('❌ [Twitter Extension] Error extracting timeline data:', error);
+    // console.error('❌ [EngageX] Error extracting timeline data:', error);
   }
 }
 
@@ -212,7 +211,7 @@ function setupTimelineObserver() {
   if (timeline) {
     if (!_observerSetUp) {
       _observerSetUp = true;
-      console.log('✅ [Twitter Extension] Found timeline container, setting up observer');
+      // console.log('✅ [EngageX] Found timeline container, setting up observer');
     }
     
     const observer = new MutationObserver((mutations) => {
@@ -253,7 +252,7 @@ function setupTimelineObserver() {
   } else {
     // Timeline not found yet, try again after a delay
     if (!_observerSetUp) {
-      console.log('⏳ [Twitter Extension] Timeline not found yet, retrying...');
+      // console.log('⏳ [EngageX] Timeline not found yet, retrying...');
     }
     setTimeout(setupTimelineObserver, 1000);
   }

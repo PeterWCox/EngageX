@@ -52,7 +52,7 @@ export function extractUsernameFromLink(link: HTMLAnchorElement): string | null 
 }
 
 // Styling
-export const FOLLOWER_BADGE_CLASS_NAME = 'twitter-extension-follower-badge';
+export const FOLLOWER_BADGE_CLASS_NAME = 'engagex-follower-badge';
 
 export const FOLLOWER_BADGE_BACKGROUND_COLOR = 'rgb(185, 28, 28)';
 
@@ -311,25 +311,25 @@ export function mapTimelineData(data: any): TimelineDataResult {
     
     // Log entry types we're processing
     if (entryTypes.size > 0) {
-      console.log('📝 [Twitter Extension] Entry types found:', Array.from(entryTypes).sort());
+      // console.log('📝 [EngageX] Entry types found:', Array.from(entryTypes).sort());
     }
     
     if (users.length > 0) {
       const extractedUsernames = new Set(users.map(u => u.screenName));
       const missingUsernames = Array.from(allUsernamesInResponse).filter(u => !extractedUsernames.has(u));
       
-      console.log(`✅ [Twitter Extension] Extracted ${users.length} users, ${tweets.length} tweets`);
+      // console.log(`✅ [EngageX] Extracted ${users.length} users, ${tweets.length} tweets`);
       
       // Log if we found usernames in API that we didn't extract
       if (missingUsernames.length > 0) {
-        console.warn(`⚠️ [Twitter Extension] Found ${missingUsernames.length} usernames in API response that weren't extracted:`, missingUsernames);
+        // console.warn(`⚠️ [EngageX] Found ${missingUsernames.length} usernames in API response that weren't extracted:`, missingUsernames);
       }
       
       // Log all usernames found in API (for debugging)
-      console.log('📋 [Twitter Extension] All usernames found in API response:', Array.from(allUsernamesInResponse).sort());
+      // console.log('📋 [EngageX] All usernames found in API response:', Array.from(allUsernamesInResponse).sort());
     }
   } catch (error) {
-    console.error('❌ [Twitter Extension] Error mapping timeline data:', error);
+    // console.error('❌ [EngageX] Error mapping timeline data:', error);
   }
   
   return { users, tweets };

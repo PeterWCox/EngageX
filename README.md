@@ -14,6 +14,18 @@ A Chrome extension that displays follower counts and **engagement opportunity ba
 - **Real-time Updates**: Works dynamically as you scroll through your Twitter timeline
 - **Comprehensive Data Extraction**: Captures user data from regular tweets, retweets, quote tweets, and conversation threads
 
+## Limitations
+
+⚠️ **Important**: This extension **only works on the Twitter homepage** (For You / Following tabs). It does **not** work on:
+- User profiles (your own or others')
+- Tweet detail pages
+- Search results
+- Lists
+- Bookmarks
+- Any other Twitter pages
+
+The extension intercepts the `HomeTimeline` and `HomeLatestTimeline` API endpoints, which are only available on the homepage feed.
+
 ## Badge System
 
 ### Badge Colors & Meanings
@@ -186,7 +198,7 @@ Before building, you need to generate PNG icons from the SVG source:
 
 ```javascript
 // Get comprehensive matching report
-debugTwitterExtension()
+debugEngageX()
 
 // Shows:
 // - All cards in DOM vs API data
