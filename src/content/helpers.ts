@@ -253,7 +253,17 @@ export function mapTimelineData(data: any): TimelineDataResult {
   const seenTweets = new Set<string>();
   
   try {
-    const instructions = data?.data?.home?.home_timeline_urt?.instructions || [];
+    // Handle both Home timeline and Community timeline structures
+    let instructions: any[] = [];
+    
+    // Home timeline structure: data.home.home_timeline_urt.instructions
+    if (data?.data?.home?.home_timeline_urt?.instructions) {
+      instructions = data.data.home.home_timeline_urt.instructions;
+    }
+    // Community timeline structure: data.communityResults.result.ranked_community_timeline.timeline.instructions
+    else if (data?.data?.communityResults?.result?.ranked_community_timeline?.timeline?.instructions) {
+      instructions = data.data.communityResults.result.ranked_community_timeline.timeline.instructions;
+    }
     
     // Deep search for ALL usernames in the response (for debugging)
     const allUsernamesInResponse = findAllUsernamesInResponse(data);

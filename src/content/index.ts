@@ -10,11 +10,16 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
   const response = await _originalFetch.call(this, input, init);
   
   // Log other Timeline endpoints we might be missing
-  if (url.includes('/graphql/') && url.includes('Timeline') && !url.includes('HomeLatestTimeline') && !url.includes('HomeTimeline')) {
+  if (url.includes('/graphql/') && url.includes('Timeline') && 
+      !url.includes('HomeLatestTimeline') && 
+      !url.includes('HomeTimeline') && 
+      !url.includes('CommunityTweetsTimeline')) {
     console.log('🔍 Other Timeline endpoint detected (not captured):', url.match(/\/graphql\/[^/]+\/([^?]+)/)?.[1] || url);
   }
   
-  if (url.includes('HomeLatestTimeline') || url.includes('HomeTimeline')) {
+  if (url.includes('HomeLatestTimeline') || 
+      url.includes('HomeTimeline') || 
+      url.includes('CommunityTweetsTimeline')) {
     console.log('✅ Timeline intercepted (fetch):', url);
     try {
       const data = await response.clone().json();
@@ -31,7 +36,9 @@ XMLHttpRequest.prototype.open = function(_method: string, url: string | URL) {
 
 XMLHttpRequest.prototype.send = function() {
   const url = (this as any)._url || '';
-  if (url.includes('HomeLatestTimeline') || url.includes('HomeTimeline')) {
+  if (url.includes('HomeLatestTimeline') || 
+      url.includes('HomeTimeline') || 
+      url.includes('CommunityTweetsTimeline')) {
     console.log('✅ Timeline intercepted (XHR):', url);
     this.addEventListener('load', function() {
       try {
