@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "EngageX - Twitter Engagement Helper",
+  "version": "1.0.0",
+  "description": "Smart engagement badges show when it's the best time to reply. See follower counts and engagement opportunities at a glance.",
+  "author": "Peter Cox",
+  "homepage_url": "https://github.com/PeterWCox/EngageX",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": ["content/content.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "EngageX - Engagement Helper",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  }
+}
+

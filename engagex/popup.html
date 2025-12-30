@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitter Engagement Helper</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #15202b;
+      color: #e7e9ea;
+      margin: 0;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 16px 0;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 16px 0 8px 0;
+      color: #8899a6;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    p {
+      font-size: 13px;
+      color: #8899a6;
+      margin: 0 0 8px 0;
+      line-height: 1.4;
+    }
+    .badge-example {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+      margin-right: 4px;
+    }
+    .badge-red { background: rgb(185, 28, 28); }
+    .badge-yellow { background: rgb(234, 179, 8); color: #000; }
+    .badge-green { background: rgb(22, 163, 74); }
+    
+    .legend-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .legend-text {
+      font-size: 12px;
+      color: #e7e9ea;
+      line-height: 1.4;
+    }
+    .legend-desc {
+      font-size: 11px;
+      color: #8899a6;
+      margin-top: 2px;
+    }
+    .tip {
+      background: rgba(29, 161, 242, 0.1);
+      border-left: 3px solid #1da1f2;
+      padding: 10px 12px;
+      margin-top: 16px;
+      border-radius: 0 8px 8px 0;
+    }
+    .tip-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1da1f2;
+      margin-bottom: 4px;
+    }
+    .tip p {
+      font-size: 11px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐦 Engagement Helper</h1>
+  <p>Badges appear next to usernames showing follower counts and engagement opportunities.</p>
+  
+  <div class="tip" style="background: rgba(234, 179, 8, 0.1); border-left-color: rgb(234, 179, 8); margin-top: 0;">
+    <div class="tip-title">⚠️ Where It Works</div>
+    <p>This extension only works on the <strong>homepage</strong> (For You / Following tabs). It does not work on profiles, tweet pages, search, or other pages.</p>
+  </div>
+  
+  <h2>Badge Colors</h2>
+  
+  <div class="legend-item">
+    <span class="badge-example badge-green">🔥 Reply now!</span>
+    <div>
+      <div class="legend-text">High opportunity</div>
+      <div class="legend-desc">Big account, few replies, fresh tweet. Jump in!</div>
+    </div>
+  </div>
+  
+  <div class="legend-item">
+    <span class="badge-example badge-yellow">⚡ Good timing</span>
+    <div>
+      <div class="legend-text">Decent opportunity</div>
+      <div class="legend-desc">Good window to engage before it gets crowded.</div>
+    </div>
+  </div>
+  
+  <div class="legend-item">
+    <span class="badge-example badge-red">45K followers</span>
+    <div>
+      <div class="legend-text">Follower count only</div>
+      <div class="legend-desc">No special engagement opportunity detected.</div>
+    </div>
+  </div>
+  
+  <div class="tip">
+    <div class="tip-title">💡 Pro Tip</div>
+    <p>Hover over any badge to see detailed stats: follower ratio, tweet age, reply count, and opportunity score.</p>
+  </div>
+</body>
+</html>
+

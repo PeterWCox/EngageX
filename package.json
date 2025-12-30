@@ -10,7 +10,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "zip": "zip -r engagex.zip . -x \"node_modules/*\" \"dist/*\" \".git/*\" \"*.zip\" \".DS_Store\" \"*.log\""
+    "zip": "rm -f engagex.zip && rm -rf dist && npm run build && cd dist && zip -r ../engagex.zip . -x \"src/*\" && cd .."
   },
   "dependencies": {
     "react": "^18.2.0",
