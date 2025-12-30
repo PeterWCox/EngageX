@@ -5,12 +5,11 @@ const _originalXHRSend = XMLHttpRequest.prototype.send;
 
 let _onTimelineData: ((data: any) => void) | null = null;
 
-window.fetch = async function(...args: any[]) {
-  const url = args[0]?.toString() || '';
-  console.log('🌐 [Fetch]', url);
-  const response = await _originalFetch.apply(this, args);
+window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
+  const url = input?.toString() || '';
+  const response = await _originalFetch.call(this, input, init);
   if (url.includes('HomeLatestTimeline') || url.includes('HomeTimeline')) {
-    console.log('✅ Timeline (fetch):', url);
+    console.log('✅ Timeline intercepted (fetch):', url);
     try {
       const data = await response.clone().json();
       if (_onTimelineData) _onTimelineData(data);
@@ -19,16 +18,15 @@ window.fetch = async function(...args: any[]) {
   return response;
 };
 
-XMLHttpRequest.prototype.open = function(method: string, url: string | URL) {
+XMLHttpRequest.prototype.open = function(_method: string, url: string | URL) {
   (this as any)._url = url?.toString() || '';
-  console.log('🌐 [XHR]', (this as any)._url);
   return _originalXHROpen.apply(this, arguments as any);
 };
 
 XMLHttpRequest.prototype.send = function() {
   const url = (this as any)._url || '';
   if (url.includes('HomeLatestTimeline') || url.includes('HomeTimeline')) {
-    console.log('✅ Timeline (XHR):', url);
+    console.log('✅ Timeline intercepted (XHR):', url);
     this.addEventListener('load', function() {
       try {
         const data = JSON.parse(this.responseText);
@@ -42,55 +40,86 @@ XMLHttpRequest.prototype.send = function() {
 console.log('✅ Interceptors installed EARLY');
 
 // Now import the rest
-import { getTweetCards, getTweetCardsContainer } from './helpers';
-import { injectFollowerCountToCard, FollowerData } from './inject-card-elements';
-import { mapTimelineData } from './map-timeline-data';
+import { getTweetCards, getTweetCardsContainer, mapTimelineData } from './helpers';
+import { injectFollowerCountToCard, FollowerData, TweetData } from './inject-card-elements';
 
 console.log('%c🚀 TWITTER EXTENSION LOADED 🚀', 'font-size: 20px; font-weight: bold; color: #1DA1F2; background: #000; padding: 10px; border-radius: 5px;');
 console.log('%cBuild timestamp: ' + new Date().toISOString(), 'font-size: 12px; color: #666;');
 
-const followerData: FollowerData[] = [];
+const userData: FollowerData[] = [];
+const tweetData: TweetData[] = [];
 
 function processAllCards() {
   const cards = getTweetCards();
   
   cards.forEach((card) => {
-    injectFollowerCountToCard(card, followerData);
+    injectFollowerCountToCard(card, userData, tweetData);
   });
 }
 
-function extractAndStoreFollowerData(data: any) {
+function extractAndStoreTimelineData(data: any) {
   try {
-    const newFollowerData = mapTimelineData(data);
+    const { users, tweets } = mapTimelineData(data);
     
-    let newCount = 0;
-    for (const item of newFollowerData) {
-      if (!followerData.find(f => f.screenName === item.screenName)) {
-        followerData.push(item);
-        newCount++;
+    // Add new users
+    let newUserCount = 0;
+    for (const user of users) {
+      if (!userData.find(u => u.screenName === user.screenName)) {
+        userData.push(user);
+        newUserCount++;
       }
     }
     
-    if (newCount > 0) {
-      console.log(`✅ [Twitter Extension] Added ${newCount} new follower data entries (Total: ${followerData.length})`);
+    // Add new tweets
+    let newTweetCount = 0;
+    for (const tweet of tweets) {
+      if (!tweetData.find(t => t.tweetId === tweet.tweetId)) {
+        tweetData.push(tweet);
+        newTweetCount++;
+      }
+    }
+    
+    if (newUserCount > 0 || newTweetCount > 0) {
+      console.log(`✅ [Twitter Extension] Added ${newUserCount} users, ${newTweetCount} tweets (Total: ${userData.length} users, ${tweetData.length} tweets)`);
+      
+      // Log high-opportunity tweets
+      const hotTweets = tweets
+        .filter(t => t.engagementOpportunityScore > 30)
+        .sort((a, b) => b.engagementOpportunityScore - a.engagementOpportunityScore)
+        .slice(0, 5);
+      
+      if (hotTweets.length > 0) {
+        console.log('🔥 High engagement opportunities:', hotTweets.map(t => ({
+          user: `@${t.screenName}`,
+          score: Math.round(t.engagementOpportunityScore),
+          replies: t.replyCount,
+          views: t.viewCount?.toLocaleString() || 'N/A',
+          age: `${Math.round(t.ageMinutes / 60)}h`,
+        })));
+      }
       
       setTimeout(() => {
         processAllCards();
       }, 100);
     }
   } catch (error) {
-    console.error('❌ [Twitter Extension] Error extracting follower data:', error);
+    console.error('❌ [Twitter Extension] Error extracting timeline data:', error);
   }
 }
 
 // Set the callback for intercepted data
-_onTimelineData = extractAndStoreFollowerData;
+_onTimelineData = extractAndStoreTimelineData;
 
 // Set up MutationObserver to watch the timeline for new cards
+let _observerSetUp = false;
+
 function setupTimelineObserver() {
+  if (_observerSetUp) return; // Prevent duplicate observers
+  
   const timeline = getTweetCardsContainer();
   
   if (timeline) {
+    _observerSetUp = true;
     console.log('✅ [Twitter Extension] Found timeline container, setting up observer');
     
     const observer = new MutationObserver((mutations) => {
